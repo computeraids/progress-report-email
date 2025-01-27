@@ -100,9 +100,12 @@ else:
         except StopIteration:
             print("done!")
         file.close()
-    with open(f"exports/Report - {week_map[week]['name']}.csv", "w", newline="") as file:
-        writer = csv.DictWriter(file, fieldnames=["Email Address", "Student", "Module", "Assignment Count", "Assignment List",
-        "Module Completed", "Actual Completed Assigments", "Total Assignments in Course", "Total Complete", "Late Assignments"])
-        writer.writeheader()
-        writer.writerows(data)
-        file.close()
+    if ":" in week_map[week]['name']:
+        file = open(f"exports/Report - {week_map[week]['name'].split(":")[0]}.csv", "w", newline="")
+    else:
+        file = open(f"exports/Report - {week_map[week]['name']}.csv", "w", newline="")
+    writer = csv.DictWriter(file, fieldnames=["Email Address", "Student", "Module", "Assignment Count", "Assignment List",
+    "Module Completed", "Actual Completed Assigments", "Total Assignments in Course", "Total Complete", "Late Assignments"])
+    writer.writeheader()
+    writer.writerows(data)
+    file.close()
