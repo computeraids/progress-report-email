@@ -101,7 +101,7 @@ else:
             print("done!")
         file.close()
     if ":" in week_map[week]['name']:
-        file = open(f"exports/Report - {week_map[week]['name'].split(":")[0]}.csv", "w", newline="")
+        file = open(f"exports/Report - {week_map[week]['name'].split(':')[0]}.csv", "w", newline="")
     else:
         file = open(f"exports/Report - {week_map[week]['name']}.csv", "w", newline="")
     writer = csv.DictWriter(file, fieldnames=["Email Address", "Student", "Module", "Assignment Count", "Assignment List",
