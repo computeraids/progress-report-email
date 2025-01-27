@@ -37,7 +37,10 @@ module = week_map[current_week]["name"]
 assignment_count = len(week_map[current_week]["assignments"])
 assignmentlist = ""
 for assignment in week_map[current_week]["assignments"]:
-    assignmentlist += "- "+assignment.split(" (")[0]+"\n"
+    final_string = ""
+    for piece in assignment.split(" (")[:-1]:
+        final_string += piece
+    assignmentlist += "- "+final_string+"\n"
 
 totalcomplete = 0
 for week in weeks_to_send:
@@ -84,11 +87,17 @@ else:
                         try:
                             if float(current_row[name_to_index[assignment]]) == assignment_dict[assignment]["missingif"]:
                                 actualcompleted -= 1
-                                late_assignment_list += "- "+assignment.split(" (")[0]+"\n"
+                                final_string = ""
+                                for piece in assignment.split(" (")[:-1]:
+                                    final_string += piece
+                                late_assignment_list += "- "+final_string+"\n"
                         except:
                             if current_row[name_to_index[assignment]] == assignment_dict[assignment]["missingif"]:
                                 actualcompleted -= 1
-                                late_assignment_list += "- "+assignment.split(" (")[0]+"\n"
+                                final_string = ""
+                                for piece in assignment.split(" (")[:-1]:
+                                    final_string += piece
+                                late_assignment_list += "- "+final_string+"\n"
 
                 if actualcompleted != totalcomplete:
                     late_assignment_list = "In order to catch up, you can complete the following assignments:\n" + late_assignment_list

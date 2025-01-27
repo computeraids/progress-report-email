@@ -21,9 +21,9 @@
 
 ### `assignment_scraper.py` ###
 
- This file takes __the last .csv file__ in the directory and treats it as the gradebook, scraping the column headers for assignments. It does this by searching for all assignments which have " (" located inside them, since all canvas assignments end in their assignment ID in parenthesis. This means if assignments include parentheses, this will not be read correct (since all parts after the "( " are truncated.). If this is an issue, let me know, and I can write something a little bit smarter.
+ This file takes __the last .csv file__ in the directory and treats it as the gradebook, scraping the column headers for assignments.
 
- It is worth noting that the scraper will **not** scrape unpublished assignments, or at least hasn't before. It goes based on what Canvas provides in the entire gradebook export.
+ It is worth noting that the scraper will **not** scrape unpublished assignments, or at least hasn't before. It goes based on what Canvas provides in the entire gradebook export. It may also scrape non-assignments, if they contain the character combo " (" somewhere in the text.
 
 If this file isn't working, check to make sure you don't have multiple .csv files in the main directory. Ensure that only the current gradebook is present.
 
