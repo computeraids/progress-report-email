@@ -1,0 +1,27 @@
+TITLE:
+Progress Report - {{Module}}
+
+BODY:
+{{Student}},
+
+We have now finished {{Module}}. This email is a progress report on your completion of the module and the course as a whole as of now.
+
+-----===== {{Module}} =====-----
+
+This module had {{Assignment Count}} assignments, which were:
+
+{{Assignment List}}
+As of this email, you have completed {{Module Completed}} out of {{Assignment Count}} assignments for the module.
+
+
+
+-----===== Course Completion =====-----
+
+You have completed {{Actual Completed Assigments}} out of {{Total Assignments in Course}}  total assignments in the course, with the goal being {{Total Complete}} by now.
+
+{{Late Assignments}}
+
+These metrics do not reflect any grades, only completion of assignments. If you have any questions, please contact members of the instructional team, or check the course Canvas Page. Any reply to this email will be forwarded to the instructional team.
+
+Thanks,
+The Instructional Team
