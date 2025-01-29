@@ -6,8 +6,13 @@ abspath = os.path.abspath(__file__)
 dname = os.path.dirname(abspath)
 os.chdir(dname)
 
+with open("api.json", "r") as file:
+    api_assignments = list(map(str.rstrip, list(json.load(file).keys())))
+    file.close()
+
 with open("assignments.json", "r") as file:
-    current_assignments = list(map(str.rstrip, list(json.load(file).keys())))
+    assignment_dict = json.load(file)
+    current_assignments = list(map(str.rstrip, list(assignment_dict.keys())))
     file.close()
     
 with open("modules.json", "r") as file:
@@ -30,6 +35,9 @@ for assignment in assignments:
 for assignment in current_assignments:
     if assignment not in week_assignments:
         print(f"\nWarning! '{assignment}' from assignments.json not in modules.json!")
+    if assignment_dict[assignment]["missingif"] == 'api':
+        if assignment not in api_assignments:
+            print(f"\nCRITICAL WARNING!!! '{assignment}' from assignments.json not in api.json! (run api_handler.py)")
 
 for assignment in week_assignments:
     if assignment not in current_assignments:

@@ -6,6 +6,10 @@ abspath = os.path.abspath(__file__)
 dname = os.path.dirname(abspath)
 os.chdir(dname)
 
+with open("api.json", "r") as file:
+    api_dict = json.load(file)
+    file.close()
+
 with open("assignments.json", "r") as file:
     assignment_dict = json.load(file)
     file.close()
@@ -76,7 +80,7 @@ else:
                         if float(current_row[name_to_index[assignment]]) == assignment_dict[assignment]["missingif"]:
                             module_completed -= 1
                     except:
-                        if current_row[name_to_index[assignment]] == assignment_dict[assignment]["missingif"]:
+                        if (assignment_dict[assignment]["missingif"] == "api" and current_row[1] in api_dict[assignment]) or current_row[name_to_index[assignment]] == assignment_dict[assignment]["missingif"]:
                             module_completed -= 1
                                 
 
@@ -84,20 +88,24 @@ else:
                 late_assignment_list = ""
                 for week in weeks_to_send:
                     for assignment in week_map[week]["assignments"]:
-                        try:
-                            if float(current_row[name_to_index[assignment]]) == assignment_dict[assignment]["missingif"]:
-                                actualcompleted -= 1
-                                final_string = ""
-                                for piece in assignment.split(" (")[:-1]:
-                                    final_string += piece
-                                late_assignment_list += "- "+final_string+"\n"
-                        except:
-                            if current_row[name_to_index[assignment]] == assignment_dict[assignment]["missingif"]:
-                                actualcompleted -= 1
-                                final_string = ""
-                                for piece in assignment.split(" (")[:-1]:
-                                    final_string += piece
-                                late_assignment_list += "- "+final_string+"\n"
+                        missing = False
+                        if assignment_dict[assignment]["missingif"] == "api" and int(current_row[1]) in api_dict[assignment]:
+                            missing = True
+                        elif current_row[name_to_index[assignment]] == assignment_dict[assignment]["missingif"]:
+                            missing = True
+                        else:
+                            try: 
+                                if float(current_row[name_to_index[assignment]]) == assignment_dict[assignment]["missingif"]:
+                                    missing = True
+                            except:
+                                pass
+                        if missing:
+                            actualcompleted -= 1
+                            final_string = ""
+                            for piece in assignment.split(" (")[:-1]:
+                                final_string += piece
+                            late_assignment_list += "- "+final_string+"\n"
+
 
                 if actualcompleted != totalcomplete:
                     late_assignment_list = "In order to catch up, you can complete the following assignments:\n" + late_assignment_list
