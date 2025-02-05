@@ -67,4 +67,4 @@ for assignment in current_assignments:
         print(f"Page {page} empty, moving on...")
 print("All assignments scraped.")
 with open("api.json", "w") as file:
-    json.dump(missing_dict, file)
+    json.dump(missing_dict, file, indent=4)
