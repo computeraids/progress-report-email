@@ -76,13 +76,19 @@ else:
 
                 module_completed = assignment_count
                 for assignment in week_map[current_week]["assignments"]:
-                    try:
-                        if float(current_row[name_to_index[assignment]]) == assignment_dict[assignment]["missingif"]:
-                            module_completed -= 1
-                    except:
-                        if (assignment_dict[assignment]["missingif"] == "api" and current_row[1] in api_dict[assignment]) or current_row[name_to_index[assignment]] == assignment_dict[assignment]["missingif"]:
-                            module_completed -= 1
-                                
+                    missing = False
+                    if assignment_dict[assignment]["missingif"] == "api" and int(current_row[1]) in api_dict[assignment]:
+                        missing = True
+                    elif current_row[name_to_index[assignment]] == assignment_dict[assignment]["missingif"]:
+                        missing = True
+                    else:
+                        try: 
+                            if float(current_row[name_to_index[assignment]]) == assignment_dict[assignment]["missingif"]:
+                                missing = True
+                        except:
+                            pass
+                    if missing:
+                        module_completed -= 1
 
                 actualcompleted = totalcomplete
                 late_assignment_list = ""
