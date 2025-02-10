@@ -5,15 +5,25 @@
 ### Quickstart ###
 
 - Drag and drop an entire gradebook export from your course into the main directory for this repo. Don't worry about the name.
+
 - Run `assignment_scraper.py`. It should produce or update a file called `assignments.txt` and `suggested_assignments.json`.
+
 - From `suggested_assignments`, copy all assignments you want to report on into the `assignments.json` file, changing the `missingif` condition if necessary (read below).
+
 - Copy all assignments from `assignments.json` into `modules.json`, putting all assignments belonging to each module in a respective list. If you need to create new weeks, make sure their names are numerical, and increasing from previous weeks.
+
 - Name each module / week in `modules.json`.
+
 - If any of your assignments utilize the Canvas API to determine if they are missing, run `api_handler.py`. It will ask you to provide a number corresponding to the module (and previous ones) to process with the API. This will produce an `api.json` file; you don't need to do anything with this.
+
 - After moving all appropriate assignments, run `checker.py`. It will produce output letting you know what files in `assignment.txt` aren't in `assignments.json`, and what files in `assignments.json` aren't in `modules.json`, and what assignments are in `modules.json` that aren't in `assignments.json`. This last one is vitally important; if there are assignments in `modules.json` that aren't in `assignments.json`, the tool **will** crash.
+
 - Once you have validated with `checker.py`, run `runner.py`. It will ask you to provide a number during it's runtime; this number correspondeds to the number you put in `modules.json` for the module you want to export. It will produce an output .csv file named `Report - Content Block.csv`, under the `exports/` directory.
+
 - Upload the exported csv to Google Drive. Make sure you have Yet Another Mail Merger (YAMM) installed (should be for all UNC Charlotte users).
+
 - Utilize the email template provided here, OR write your own following the YAMM format and column headers in exported csv. Either way, save it as a draft under your email. Remember you can personalize the title, too!
+
 - Send the email utilizing YAMM from Google Sheets. You're done!
 
 ## New Feature: Canvas API ##
