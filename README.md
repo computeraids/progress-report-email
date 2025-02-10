@@ -62,6 +62,8 @@ If this file isn't working, check to make sure you don't have multiple .csv file
 
  If an assignment is given the value `api` for `missingif`, it will defer to the information downloaded via the API to determine if the assignment is missing.
 
+ You can also have multiple criteria to check for, where the checker will determine an assignment as missing if the value in the gradebook matches any value. This is achieved using a simple list. As an example ['', 0] would could an assignment as missing if it had no grade input OR a zero value. This can also work with the API value, but that's a little strange.
+
  You can have more assignments in `assignments.json` than in `modules.json`, as this file is only used to reference the assignments `runner.py` checks based on `modules.json`. This means you can fill out more assignments than modules, and the tool will work fine; you only need to make sure that all assignments in `modules.json` are in `assignments.json`.
  
 ### `modules.json` ###

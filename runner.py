@@ -19,28 +19,23 @@ with open("modules.json", "r") as file:
     weeks = week_map.keys()
     file.close()
 
-def is_missing(assignment, current_row, name_to_index):
+def is_missing(assignment, current_row, name_to_index, missing_val):
     #checks for list type, then evaluates all criteria. behaves using "or" logic
-    if type(assignment_dict[assignment]["missingif"]) == type([]):
-        for value in assignment_dict[assignment]["missingif"]:
-            if current_row[name_to_index[assignment]] == value:
+    if type(missing_val) == type([]):
+        for value in missing_val:
+            if is_missing(assignment, current_row, name_to_index, value):
                 return True
-            else:
-                try: 
-                    if float(current_row[name_to_index[assignment]]) == value:
-                        return True
-                except:
-                    pass
-    if assignment_dict[assignment]["missingif"] == "api" and int(current_row[1]) in api_dict[assignment]:
+    elif missing_val == "api" and int(current_row[1]) in api_dict[assignment]:
         return True
-    elif current_row[name_to_index[assignment]] == assignment_dict[assignment]["missingif"]:
+    elif current_row[name_to_index[assignment]] == missing_val:
         return True
     else:
         try: 
-            if float(current_row[name_to_index[assignment]]) == assignment_dict[assignment]["missingif"]:
+            if float(current_row[name_to_index[assignment]]) == missing_val:
                 return True
         except:
             pass
+    return False
 
 current_week = str(input("Please enter the number corresponding to the week (i.e. '2')"))
 weeks_to_send = [current_week]
@@ -99,14 +94,14 @@ else:
 
                 module_completed = assignment_count
                 for assignment in week_map[current_week]["assignments"]:
-                    if is_missing(assignment, current_row, name_to_index):
+                    if is_missing(assignment, current_row, name_to_index, assignment_dict[assignment]["missingif"]):
                         module_completed -= 1
 
                 actualcompleted = totalcomplete
                 late_assignment_list = ""
                 for week in weeks_to_send:
                     for assignment in week_map[week]["assignments"]:
-                        if is_missing(assignment, current_row, name_to_index):
+                        if is_missing(assignment, current_row, name_to_index, assignment_dict[assignment]["missingif"]):
                             actualcompleted -= 1
                             final_string = ""
                             for piece in assignment.split(" (")[:-1]:
