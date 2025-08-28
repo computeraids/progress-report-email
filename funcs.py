@@ -18,20 +18,20 @@ os.chdir(dname)
 def check():
 
     # open the api file
-    with open("api.json", "r") as file:
+    with open("./userdata/api.json", "r") as file:
         # the strips on the below line help remove random whitespace from canvas imports
         api_assignments = list(map(str.rstrip, list(json.load(file).keys())))
         file.close()
 
     # open the assignments json (handmade)
-    with open("assignments.json", "r") as file:
+    with open("./userdata/assignments.json", "r") as file:
         assignment_dict = json.load(file)
         # the strips on the below line help remove random whitespace from canvas imports
         current_assignments = list(map(str.rstrip, list(assignment_dict.keys())))
         file.close()
 
     # open the modules json (handmade)  
-    with open("modules.json", "r") as file:
+    with open("./userdata/modules.json", "r") as file:
         week_map = json.load(file)
         # this is a temp list used to hold all the assignments which have modules ("weeks").
         assignments_in_modules = []
@@ -84,15 +84,15 @@ def canvas_api():
     apikey = str(config["API"]["apikey"])
     course = str(config["API"]["course"])
 
-    # right now we determine what assignments to pull based on the "assignments.json" file. If a given assignment has
+    # right now we determine what assignments to pull based on the "./userdata/assignments.json" file. If a given assignment has
     # the api listed as its submission criterion, it pulls it here. Otherwise, we ignore it.
-    with open("assignments.json", "r") as file:
+    with open("./userdata/assignments.json", "r") as file:
         assignment_dict = json.load(file)
         file.close()
 
     # this scopes the API usage so that we're not pulling everything in the class all at once. I'll be so real;
     # we can pull everything all at once. It's not that much of a problem.    
-    with open("modules.json", "r") as file:
+    with open("./userdata/modules.json", "r") as file:
         week_map = json.load(file)
         weeks = week_map.keys()
         file.close()
@@ -165,7 +165,7 @@ def canvas_api():
     
     # dumps everything for later use
     print("All assignments pulled via API.")
-    with open("api.json", "w") as file:
+    with open("./userdata/api.json", "w") as file:
         json.dump(missing_dict, file, indent=4)
 
 
@@ -174,7 +174,7 @@ def canvas_api():
 # this file can get completely trashed. We should move over to canvas API for this.
 # I won't comment the code since the goal is to not have it anymore.
 def scrape_assignments():
-    with open("assignments.json", "r") as file:
+    with open("./userdata/assignments.json", "r") as file:
         assignment_dict = json.load(file)
         file.close()
 
@@ -236,17 +236,17 @@ def is_missing(assignment, current_row, name_to_index, missing_val):
 # longterm, I think we should rewrite this to be more modular and customizable by users.
 def make_emails():
     # get all assignments controlled by the api
-    with open("api.json", "r") as file:
+    with open("./userdata/api.json", "r") as file:
         api_dict = json.load(file)
         file.close()
 
     # open all assignments currently known by the tool
-    with open("assignments.json", "r") as file:
+    with open("./userdata/assignments.json", "r") as file:
         assignment_dict = json.load(file)
         file.close()
 
     # open all modules known by the tool 
-    with open("modules.json", "r") as file:
+    with open("./userdata/modules.json", "r") as file:
         week_map = json.load(file)
         weeks = week_map.keys()
         file.close()
@@ -440,6 +440,10 @@ def setup_data(args):
             json.dump({}, writefile, indent=4)
             writefile.close()
 
+    if "api" in args:
+        with open('./userdata/api.json', 'w') as writefile:
+            json.dump({}, writefile, indent=4)
+            writefile.close()
 
 
 # since the config is particularly fiddly, it makes most since to have it be its own subfunc
