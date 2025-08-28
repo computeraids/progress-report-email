@@ -1,7 +1,4 @@
-import assignment_scraper
-import api_handler
-import checker
-import runner
+import funcs
 
 run = True
 while run:
@@ -9,12 +6,12 @@ while run:
 3)Check Config \t\t 4) Make Emails\n5) Exit\n"""))
     match command:
         case 1:
-            assignment_scraper.scrape_assignments()
+            funcs.scrape_assignments()
         case 2:
-            api_handler.canvas_api()
+            funcs.canvas_api()
         case 3:
-            checker.check()
+            funcs.check()
         case 4:
-            runner.make_emails()
+            funcs.make_emails()
         case 5:
             run = False
