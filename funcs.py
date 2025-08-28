@@ -48,7 +48,9 @@ def check():
     with open("assignments.txt", "r") as file:
         for line in file:
             assignments.append(line.rstrip())
-        
+    
+    # the print statements on each of these lines gives you a rough idea of what its checking for. Again, better to have it than not,
+    # but we need a better long term solution.
     for assignment in assignments:
         if assignment not in current_assignments:
             print(f"\nWarning! '{assignment}' from assignments.txt not in assignments.json!")
@@ -68,56 +70,86 @@ def check():
 
 
 ### imported from api_handler ###
+# this handles the CanvasAPI scraping of assignment submissions. There's a whole system to how these exports work,
+# and I think we should migrate to just using the api for everything. We can leave the old functionality in here under
+# some legacy code (could help in working with non-Canvas systems in the future), but right now the entire scope of this
+# project exists in Canvas.
 def canvas_api():
     config = configparser.ConfigParser()
     config.read('userdata/config.ini')
+
+    # a lot of this config reading (which we may add more) can eventually be put somewhere less scoped
     apikey = str(config["API"]["apikey"])
     course = str(config["API"]["course"])
-    print(apikey)
 
+    # right now we determine what assignments to pull based on the "assignments.json" file. If a given assignment has
+    # the api listed as its submission criterion, it pulls it here. Otherwise, we ignore it.
     with open("assignments.json", "r") as file:
         assignment_dict = json.load(file)
         file.close()
-        
+
+    # this scopes the API usage so that we're not pulling everything in the class all at once. I'll be so real;
+    # we can pull everything all at once. It's not that much of a problem.    
     with open("modules.json", "r") as file:
         week_map = json.load(file)
         weeks = week_map.keys()
         file.close()
 
+    # standard week input
     current_week = str(input("Please enter the number corresponding to the week (i.e. '2')"))
     weeks_to_send = [current_week]
 
+    # goofy code I wrote, essentially adds a descending int list of the number entered regardless.
+    # there is reason for this; people can enter non integer numbers for week IDs, so here we pull
+    # all that are smaller.
     for week in weeks:
         if float(week) < float(current_week):
             weeks_to_send.append(week)
 
+    # awesome line
     workfile = ""
 
+    # uses the module mapping to determine everything that needs to be pulled
     current_assignments = []
     for week in weeks_to_send:
         current_assignments += week_map[week]["assignments"]
 
+    # start of the actual code. missing_dict is the actual api dump that we save
     missing_dict = {}
     for assignment in current_assignments:
 
+        # if the assignment is in the scope of the pull, check if we need to run the api on it
         if assignment_dict[assignment]["missingif"] == "api":
+            # canvas gradebook (and subsequently our code) embeds assignments as "name (assignment_id)". This strips the assignment ID.
+            # if we change this in the future, would make sense to fix this.
             assignment_id = assignment.split("(")[-1][:-1]
+            # for each assignment that needs api info we create a list.
             missing_dict[assignment] = []
 
+            # so fun fact; we have to batch requests per 100 students to the API. This  looping function is here to go over all the pages.
+            # maybe eventually we implement a progress bar or something? We can know the total amount of work ahead of time.
             page = 1
             print(f"Requesting page {page} of {assignment}...")
+            # below is the full api url for the dump. You can look it over, it's pretty straightforward.
             r = requests.get("https://uncc.instructure.com/api/v1/courses/"+course+"/assignments/"+assignment_id+"/submissions?access_token="+apikey+"&per_page=100&page=1&include[]=submission_history")
+            # sometimes Canvas will get mad at the number of requests, depending on the speed of the data transfer. This catches that issue and sleeps
+            # the thread long enough to let us try again.
             while r.status_code == 403:
                 print(f"Status Code 403, rerequesting page {page} of {assignment}...")
-                time.sleep(5)
+                time.sleep(2)
                 r = requests.get("https://uncc.instructure.com/api/v1/courses/"+course+"/assignments/"+assignment_id+"/submissions?access_token="+apikey+"&per_page=100&page=1&include[]=submission_history")
             print("Done!")
+            # checks to see that the export isn't empty (i.e., the page has students on it)
             while r.text != "[]":
                 page += 1
                 submissions = json.loads(r.text)
                 for submission in submissions:
+                    # canvas just directly holds a boolean called missing for submittable assignments. freakin sweet
                     if submission["missing"]:
+                        # the way that we store missing assignments is a list of user IDs we cross-reference later. seemed okay to me
                         missing_dict[assignment].append(submission["user_id"])
+
+                # all the code from above again. a dowhile in python would go crazy... which we can write.
                 print(f"Requesting page {page} of {assignment}...")
                 r = requests.get("https://uncc.instructure.com/api/v1/courses/"+course+"/assignments/"+assignment_id+"/submissions?access_token="+apikey+"&per_page=100&page="+str(page)+"&include[]=submission_history")
                 while r.status_code == 403:
@@ -125,14 +157,20 @@ def canvas_api():
                     time.sleep(2)
                     r = requests.get("https://uncc.instructure.com/api/v1/courses/"+course+"/assignments/"+assignment_id+"/submissions?access_token="+apikey+"&per_page=100&page="+str(page)+"&include[]=submission_history")
                 print("Done!")
+            # empty page, so we're done with this assignment
             print(f"Page {page} empty, moving on...")
-    print("All assignments scraped.")
+
+    
+    # dumps everything for later use
+    print("All assignments pulled via API.")
     with open("api.json", "w") as file:
         json.dump(missing_dict, file, indent=4)
 
 
 
 ### imported from assignment_scraper ###
+# this file can get completely trashed. We should move over to canvas API for this.
+# I won't comment the code since the goal is to not have it anymore.
 def scrape_assignments():
     with open("assignments.json", "r") as file:
         assignment_dict = json.load(file)
@@ -168,6 +206,8 @@ def scrape_assignments():
 
 
 ### imported from runner ###
+# this is the main logic used in the next function to check for missing assignments.
+# it can handle most inputs, we'll mostly use API and something else to backup on unsubmittable assignments.
 def is_missing(assignment, current_row, name_to_index, missing_val):
         #checks for list type, then evaluates all criteria. behaves using "or" logic
         if type(missing_val) == type([]):
@@ -189,79 +229,105 @@ def is_missing(assignment, current_row, name_to_index, missing_val):
 
 
 ### imported from runner ###
+# this is the big one. This is what actually produces the output file that is used to send emails.
+# it's a big func, so i'll try to be clear with everything that happens.
+# longterm, I think we should rewrite this to be more modular and customizable by users.
 def make_emails():
+    # get all assignments controlled by the api
     with open("api.json", "r") as file:
         api_dict = json.load(file)
         file.close()
 
+    # open all assignments currently known by the tool
     with open("assignments.json", "r") as file:
         assignment_dict = json.load(file)
         file.close()
-        
+
+    # open all modules known by the tool 
     with open("modules.json", "r") as file:
         week_map = json.load(file)
         weeks = week_map.keys()
         file.close()
 
+    # set the week index the user wants to do. We could maybe give a menu that shows modules?
     current_week = str(input("Please enter the number corresponding to the week (i.e. '2')"))
     weeks_to_send = [current_week]
 
+    # again, week logic to send anything < current.
     for week in weeks:
         if float(week) < float(current_week):
             weeks_to_send.append(week)
 
+    # sweet line
     workfile = ""
 
+    # pulls all the assignments that are relevant 
     current_assignments = []
     for week in weeks_to_send:
         current_assignments += week_map[week]["assignments"]
 
+    # this is what checks for and opens the gradebook for utilization.
     for file in os.listdir():
         if (file.split(".")[-1] == "csv"):
             workfile = file
 
-    ### GLOBAL STUFF DONE HERE (because I said so) ###
+    # this sets some of the things included in the export.
+    # module, number of assignments, and the list of assignments for the module are done here.
     module = week_map[current_week]["name"]
     assignment_count = len(week_map[current_week]["assignments"])
+    # logic to get the list of assignments mapped to the current module
     assignmentlist = ""
     for assignment in week_map[current_week]["assignments"]:
+        # this logic cuts the numbers from the assignment when sending it to students.
         final_string = ""
         for piece in assignment.split(" (")[:-1]:
             final_string += piece
         assignmentlist += "- "+final_string+"\n"
 
+    # counts the total number of assignments which have been due so far, sums the number of assignments in each module.
     totalcomplete = 0
     for week in weeks_to_send:
         totalcomplete += len(week_map[week]["assignments"])
-        
+
+    # counts the total number of assignments due so far too. I believe I changed this code at some point due to a non-functional output. 
     totalcourse = 0
     for week in weeks:
         totalcourse += len(week_map[week]["assignments"])
 
+
+    # okay, time for the meat of the function.
     if workfile == "":
         print("Error: No Gradebook found")
     else:
         data = []
         with open(workfile) as file:
             gradebook = csv.reader(file)
-
+            # pulls the assignments from the header line of the gradebook.
             assignments = next(gradebook)
+            # creates a dict to map the indices of each assignment. We access students row by row, so storing header indices is needed.
             name_to_index = {}
             for assignment in current_assignments:
                 name_to_index[assignment] = assignments.index(assignment)
+            # next row, which is another index.
             current_row = next(gradebook)
             name_to_index["SIS Login ID"] = assignments.index("SIS Login ID")
             try:
                 while True:
+                    # grab the next student
                     current_row = next(gradebook)
+                    # grab the first item, and get their first name (Canvas stores Last, First)
                     student = current_row[0].split(", ")[-1]
+                    # grab the email ID row, and append their ID to charlotte. We should add a config to set the domain
                     email = current_row[name_to_index["SIS Login ID"]]+"@charlotte.edu"
 
+                    # for the module, set the total completed to the max that can be. If something isn't complete, mark it as missing, and decrease the count.
                     module_completed = assignment_count
                     for assignment in week_map[current_week]["assignments"]:
                         if is_missing(assignment, current_row, name_to_index, assignment_dict[assignment]["missingif"]):
                             module_completed -= 1
 
+                    # same thing as before, BUT we're now going over the entire course. We also keep a record of the names of late assignments.
+                    # we do this so we can send the students a list of the assignments they can work on.
                     actualcompleted = totalcomplete
                     late_assignment_list = ""
                     for week in weeks_to_send:
@@ -273,21 +339,24 @@ def make_emails():
                                     final_string += piece
                                 late_assignment_list += "- "+final_string+"\n"
 
-
+                    # if anything is missing, we throw on this line for the email.
                     if actualcompleted != totalcomplete:
                         late_assignment_list = "In order to catch up, you can complete the following assignments:\n" + late_assignment_list
 
+                    # this appends everything as it'll go into the export. Pretty clear. 
                     data.append({"Email Address":email, "Student":student, "Module":module, "Assignment Count":assignment_count,
                     "Assignment List":assignmentlist, "Module Completed":module_completed, "Actual Completed Assigments":actualcompleted,
                     "Total Assignments in Course":totalcourse, "Total Complete":totalcomplete, "Late Assignments":late_assignment_list})
-
+            # since we don't know when the file ends, we use this to catch the completion of the loop.
             except StopIteration:
                 print("done!")
             file.close()
+        # logic to catch naming conventions based on OS
         if ":" in week_map[week]['name']:
             file = open(f"exports/Report - {week_map[week]['name'].split(':')[0]}.csv", "w", newline="")
         else:
             file = open(f"exports/Report - {week_map[week]['name']}.csv", "w", newline="")
+        # write everything
         writer = csv.DictWriter(file, fieldnames=["Email Address", "Student", "Module", "Assignment Count", "Assignment List",
         "Module Completed", "Actual Completed Assigments", "Total Assignments in Course", "Total Complete", "Late Assignments"])
         writer.writeheader()
