@@ -2,10 +2,10 @@ import os
 import csv
 import json
 import requests
-import configparser
+import datetime
 import time
 import re
-
+import sys
 
 # logic that sets working directory to current. required for runtime on linux
 abspath = os.path.abspath(__file__)
@@ -75,8 +75,10 @@ def check():
 # some legacy code (could help in working with non-Canvas systems in the future), but right now the entire scope of this
 # project exists in Canvas.
 def canvas_api():
-    config = configparser.ConfigParser()
-    config.read('userdata/config.ini')
+    
+    with open("./userdata/config.json", "r") as readfile:
+        config = json.load(readfile)
+        readfile.close()
 
     # a lot of this config reading (which we may add more) can eventually be put somewhere less scoped
     apikey = str(config["API"]["apikey"])
@@ -362,3 +364,90 @@ def make_emails():
         writer.writeheader()
         writer.writerows(data)
         file.close()
+
+
+
+# new function: this is being written to utilize the api to pull assignments, removing the need for the gradebook.
+# other stuff will have to be rewritten, but this is the start of the pipeline.
+def api_scrape():
+    
+    with open("./userdata/config.json", "r") as readfile:
+        config = json.load(readfile)
+        readfile.close()
+
+    with open("./userdata/assignments.json", "r") as readfile:
+        assignments = json.load(readfile).keys()
+        readfile.close()
+
+    # a lot of this config reading (which we may add more) can eventually be put somewhere less scoped
+    apikey = str(config["API"]["apikey"])
+    course = str(config["API"]["course"])
+
+    # build the api query
+    query = "https://uncc.instructure.com/api/v1/courses/"+course+"/assignments?access_token="+apikey
+    r = requests.get(query)
+    # sometimes Canvas will get mad at the number of requests, depending on the speed of the data transfer. This catches that issue and sleeps
+    # the thread long enough to let us try again.
+    while r.status_code == 403:
+        print(f"Status Code 403, rerequesting assignments...")
+        time.sleep(2)
+        r = requests.get(query)
+
+    assignments = json.loads(r.text)
+
+    suggestions_dict = {}
+
+    for assignment in assignments:
+
+        suggestions_dict[assignment["name"]] = {}
+        
+        if "external_tool" in assignment["submission_types"] or assignment["submission_types"] == []:
+            suggestions_dict[assignment["name"]]["missingif"] = "0"
+        else:
+            suggestions_dict[assignment["name"]]["missingif"] = "api"
+
+        cd = assignment["due_at"]
+        if cd != None:
+            due_date = datetime.datetime(int(cd[:4]), int(cd[5:7]), int(cd[8:10]), int(cd[11:13]), int(cd[14:16]), int(cd[17:19]), tzinfo=datetime.timezone.utc).astimezone(tz=None)
+            suggestions_dict[assignment["name"]]["duedate"] = due_date
+        else:
+            suggestions_dict[assignment["name"]]["duedate"] = datetime.datetime.fromtimestamp(1475683200)
+
+    sorts = sorted(list(suggestions_dict.items()), key=lambda x: x[1]["duedate"].timestamp())
+    export = {}
+    for item in sorts:
+        if item[1] not in assignments:
+            export[item[0]] = item[1]
+            export[item[0]]["duedate"] = export[item[0]]["duedate"].strftime("%Y-%m-%d %H:%M:%S")
+
+    with open("./userdata/suggested_assignments.json", "w") as file:
+        json.dump(export, file, indent=4)
+
+# sets up user configuration if it isnt present.
+# everything in userdata is ignored by git, so we want to populate it all when the user launches (if its not there)
+def setup_data(args):
+
+    if "config" in args:
+        make_config()
+
+    if "assignments" in args:
+        with open('./userdata/assignments.json', 'w') as writefile:
+            json.dump({}, writefile, indent=4)
+            writefile.close()
+
+    if "modules" in args:
+        with open('./userdata/modules.json', 'w') as writefile:
+            json.dump({}, writefile, indent=4)
+            writefile.close()
+
+
+
+# since the config is particularly fiddly, it makes most since to have it be its own subfunc
+# add stuff as needed
+def make_config():
+    config = {}
+    config['DEFAULT'] = {'placeholder':''}
+    config['API'] = {'apikey':'your_api_key_here', 'course':'your_course_here'}
+    with open('./userdata/config.json', 'w') as writefile:
+        json.dump(config, writefile, indent=4)
+        writefile.close()
