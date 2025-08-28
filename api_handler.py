@@ -11,9 +11,10 @@ os.chdir(dname)
 
 def canvas_api():
     config = configparser.ConfigParser()
-    config.read('api.ini')
-    apikey = str(config["DEFAULT"]["apikey"])
-    course = str(config["DEFAULT"]["course"])
+    config.read('userdata/config.ini')
+    apikey = str(config["API"]["apikey"])
+    course = str(config["API"]["course"])
+    print(apikey)
 
     with open("assignments.json", "r") as file:
         assignment_dict = json.load(file)
