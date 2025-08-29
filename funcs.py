@@ -74,7 +74,7 @@ def check():
 # and I think we should migrate to just using the api for everything. We can leave the old functionality in here under
 # some legacy code (could help in working with non-Canvas systems in the future), but right now the entire scope of this
 # project exists in Canvas.
-def canvas_api():
+def canvas_api(current_week):
     
     with open("./userdata/config.json", "r") as readfile:
         config = json.load(readfile)
@@ -96,9 +96,7 @@ def canvas_api():
         week_map = json.load(file)
         weeks = week_map.keys()
         file.close()
-
-    # standard week input
-    current_week = str(input("Please enter the number corresponding to the week (i.e. '2')"))
+    
     weeks_to_send = [current_week]
 
     # goofy code I wrote, essentially adds a descending int list of the number entered regardless.
@@ -232,7 +230,7 @@ def is_missing(assignment, current_row, name_to_index, missing_val, api_dict):
 # this is the big one. This is what actually produces the output file that is used to send emails.
 # it's a big func, so i'll try to be clear with everything that happens.
 # longterm, I think we should rewrite this to be more modular and customizable by users.
-def make_emails():
+def make_emails(current_week):
     # get all assignments controlled by the api
     with open("./userdata/api.json", "r") as file:
         api_dict = json.load(file)
@@ -250,7 +248,6 @@ def make_emails():
         file.close()
 
     # set the week index the user wants to do. We could maybe give a menu that shows modules?
-    current_week = str(input("Please enter the number corresponding to the week (i.e. '2')"))
     weeks_to_send = [current_week]
 
     # again, week logic to send anything < current.
@@ -374,7 +371,7 @@ def api_scrape():
         readfile.close()
 
     with open("./userdata/assignments.json", "r") as readfile:
-        known_assignments = list(json.load(readfile).keys())
+        assignments = json.load(readfile)
         readfile.close()
 
     # a lot of this config reading (which we may add more) can eventually be put somewhere less scoped
@@ -391,34 +388,34 @@ def api_scrape():
         time.sleep(2)
         r = requests.get(query)
 
-    assignments = json.loads(r.text)
+    new_assignments = json.loads(r.text)
 
-    suggestions_dict = {}
+    for assignment in new_assignments:
 
-    for assignment in assignments:
+        if assignment["name"] not in list(assignments.keys()):
 
-        suggestions_dict[assignment["name"]] = {"id":assignment["id"]}
-        
-        if "external_tool" in assignment["submission_types"] or assignment["submission_types"] == []:
-            suggestions_dict[assignment["name"]]["missingif"] = "0"
-        else:
-            suggestions_dict[assignment["name"]]["missingif"] = "api"
+            assignments[assignment["name"]] = {"id":assignment["id"]}
+            
+            if "external_tool" in assignment["submission_types"] or assignment["submission_types"] == []:
+                assignments[assignment["name"]]["missingif"] = "0"
+            else:
+                assignments[assignment["name"]]["missingif"] = "api"
 
-        cd = assignment["due_at"]
-        if cd != None:
-            due_date = datetime.datetime(int(cd[:4]), int(cd[5:7]), int(cd[8:10]), int(cd[11:13]), int(cd[14:16]), int(cd[17:19]), tzinfo=datetime.timezone.utc).astimezone(tz=None)
-            suggestions_dict[assignment["name"]]["duedate"] = due_date
-        else:
-            suggestions_dict[assignment["name"]]["duedate"] = datetime.datetime.fromtimestamp(1475683200)
+            cd = assignment["due_at"]
+            if cd != None:
+                due_date = datetime.datetime(int(cd[:4]), int(cd[5:7]), int(cd[8:10]), int(cd[11:13]), int(cd[14:16]), int(cd[17:19]), tzinfo=datetime.timezone.utc).astimezone(tz=None)
+                assignments[assignment["name"]]["duedate"] = due_date
+            else:
+                assignments[assignment["name"]]["duedate"] = datetime.datetime.fromtimestamp(1475683200)
+            assignments[assignment["name"]]["duetimestamp"] = assignments[assignment["name"]]["duedate"].timestamp()
 
-    sorts = sorted(list(suggestions_dict.items()), key=lambda x: x[1]["duedate"].timestamp())
+    sorts = sorted(list(assignments.items()), key=lambda x: x[1]["duetimestamp"])
     export = {}
     for item in sorts:
-        if item[1] not in known_assignments:
-            export[item[0]] = item[1]
-            export[item[0]]["duedate"] = export[item[0]]["duedate"].strftime("%Y-%m-%d %H:%M:%S")
+        export[item[0]] = item[1]
+        export[item[0]]["duedate"] = export[item[0]]["duedate"].strftime("%Y-%m-%d %H:%M:%S")
 
-    with open("./userdata/suggested_assignments.json", "w") as file:
+    with open("./userdata/assignments.json", "w") as file:
         json.dump(export, file, indent=4)
 
 # sets up user configuration if it isnt present.
