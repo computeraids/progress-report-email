@@ -12,7 +12,7 @@ while run:
     5) Exit\n"""))
     match command:
         case 0:
-            funcs.setup_data(["assignments","modules","api"])
+            funcs.setup_data(["assignments","modules","api", "students"])
         case 1:
             funcs.api_scrape()
         case 2:
@@ -25,6 +25,8 @@ while run:
             run = False
         case 6:
             funcs.api_scrape()
+        case 7:
+            funcs.get_students()
         case 9:
             ans = input("You are about to reset userdata. Are you sure you want to do this? (Y/N)")
             if ans == "Y" or ans == "y":
