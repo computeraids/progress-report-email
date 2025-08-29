@@ -293,61 +293,55 @@ def make_emails(current_week):
 
 
     # okay, time for the meat of the function.
-    if workfile == "":
-        print("Error: No Gradebook found")
     else:
         data = []
-        with open(workfile) as file:
-            gradebook = csv.reader(file)
-            # pulls the assignments from the header line of the gradebook.
-            assignments = next(gradebook)
-            # creates a dict to map the indices of each assignment. We access students row by row, so storing header indices is needed.
-            name_to_index = {}
-            for assignment in current_assignments:
-                name_to_index[assignment] = assignments.index(assignment)
-            # next row, which is another index.
-            current_row = next(gradebook)
-            name_to_index["SIS Login ID"] = assignments.index("SIS Login ID")
-            try:
-                while True:
-                    # grab the next student
-                    current_row = next(gradebook)
-                    # grab the first item, and get their first name (Canvas stores Last, First)
-                    student = current_row[0].split(", ")[-1]
-                    # grab the email ID row, and append their ID to charlotte. We should add a config to set the domain
-                    email = current_row[name_to_index["SIS Login ID"]]+"@charlotte.edu"
+        # pulls the assignments from the header line of the gradebook.
+        # creates a dict to map the indices of each assignment. We access students row by row, so storing header indices is needed.
+        name_to_index = {}
+        for assignment in current_assignments:
+            name_to_index[assignment] = assignments.index(assignment)
+        # next row, which is another index.
+        current_row = next(gradebook)
+        name_to_index["SIS Login ID"] = assignments.index("SIS Login ID")
+        try:
+            while True:
+                # grab the next student
+                current_row = next(gradebook)
+                # grab the first item, and get their first name (Canvas stores Last, First)
+                student = current_row[0].split(", ")[-1]
+                # grab the email ID row, and append their ID to charlotte. We should add a config to set the domain
+                email = current_row[name_to_index["SIS Login ID"]]+"@charlotte.edu"
 
-                    # for the module, set the total completed to the max that can be. If something isn't complete, mark it as missing, and decrease the count.
-                    module_completed = assignment_count
-                    for assignment in week_map[current_week]["assignments"]:
+                # for the module, set the total completed to the max that can be. If something isn't complete, mark it as missing, and decrease the count.
+                module_completed = assignment_count
+                for assignment in week_map[current_week]["assignments"]:
+                    if is_missing(assignment, current_row, name_to_index, assignment_dict[assignment]["missingif"], api_dict):
+                        module_completed -= 1
+
+                # same thing as before, BUT we're now going over the entire course. We also keep a record of the names of late assignments.
+                # we do this so we can send the students a list of the assignments they can work on.
+                actualcompleted = totalcomplete
+                late_assignment_list = ""
+                for week in weeks_to_send:
+                    for assignment in week_map[week]["assignments"]:
                         if is_missing(assignment, current_row, name_to_index, assignment_dict[assignment]["missingif"], api_dict):
-                            module_completed -= 1
+                            actualcompleted -= 1
+                            final_string = ""
+                            for piece in assignment.split(" (")[:-1]:
+                                final_string += piece
+                            late_assignment_list += "- "+final_string+"\n"
 
-                    # same thing as before, BUT we're now going over the entire course. We also keep a record of the names of late assignments.
-                    # we do this so we can send the students a list of the assignments they can work on.
-                    actualcompleted = totalcomplete
-                    late_assignment_list = ""
-                    for week in weeks_to_send:
-                        for assignment in week_map[week]["assignments"]:
-                            if is_missing(assignment, current_row, name_to_index, assignment_dict[assignment]["missingif"], api_dict):
-                                actualcompleted -= 1
-                                final_string = ""
-                                for piece in assignment.split(" (")[:-1]:
-                                    final_string += piece
-                                late_assignment_list += "- "+final_string+"\n"
+                # if anything is missing, we throw on this line for the email.
+                if actualcompleted != totalcomplete:
+                    late_assignment_list = "In order to catch up, you can complete the following assignments:\n" + late_assignment_list
 
-                    # if anything is missing, we throw on this line for the email.
-                    if actualcompleted != totalcomplete:
-                        late_assignment_list = "In order to catch up, you can complete the following assignments:\n" + late_assignment_list
-
-                    # this appends everything as it'll go into the export. Pretty clear. 
-                    data.append({"Email Address":email, "Student":student, "Module":module, "Assignment Count":assignment_count,
-                    "Assignment List":assignmentlist, "Module Completed":module_completed, "Actual Completed Assigments":actualcompleted,
-                    "Total Assignments in Course":totalcourse, "Total Complete":totalcomplete, "Late Assignments":late_assignment_list})
-            # since we don't know when the file ends, we use this to catch the completion of the loop.
-            except StopIteration:
-                print("done!")
-            file.close()
+                # this appends everything as it'll go into the export. Pretty clear. 
+                data.append({"Email Address":email, "Student":student, "Module":module, "Assignment Count":assignment_count,
+                "Assignment List":assignmentlist, "Module Completed":module_completed, "Actual Completed Assigments":actualcompleted,
+                "Total Assignments in Course":totalcourse, "Total Complete":totalcomplete, "Late Assignments":late_assignment_list})
+        # since we don't know when the file ends, we use this to catch the completion of the loop.
+        except StopIteration:
+            print("done!")
         # logic to catch naming conventions based on OS
         if ":" in week_map[week]['name']:
             file = open(f"exports/Report - {week_map[week]['name'].split(':')[0]}.csv", "w", newline="")
@@ -417,6 +411,43 @@ def api_scrape():
 
     with open("./userdata/assignments.json", "w") as file:
         json.dump(export, file, indent=4)
+
+
+
+# made to get a list of students for the class
+def get_students():
+
+    with open("./userdata/config.json", "r") as readfile:
+        config = json.load(readfile)
+        readfile.close()
+
+    apikey = str(config["API"]["apikey"])
+    course = str(config["API"]["course"])
+
+    students_dict = {}
+    page = 1
+
+    while True:
+
+        query = "https://uncc.instructure.com/api/v1/courses/"+course+"/users?access_token="+apikey+"&per_page=250&page="+page
+
+        r = requests.get(query)
+
+        while r.status_code == 403:
+            print(f"Status Code 403, rerequesting assignments...")
+            time.sleep(2)
+            r = requests.get(query)
+
+        students = json.loads(r.text)
+
+        if students == "[]":
+            break
+
+        for student in students:
+            students_dict[student["sis_user_id"]] = {"name":student["name"], "email":student["email"], "id":student["id"]}
+
+    with open("students.json", "r") as writefile:
+        json.dump(students_dict, file, indent=4)
 
 # sets up user configuration if it isnt present.
 # everything in userdata is ignored by git, so we want to populate it all when the user launches (if its not there)
