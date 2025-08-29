@@ -348,6 +348,10 @@ def api_scrape():
         assignments = json.load(readfile)
         readfile.close()
 
+    with open("./userdata/modules.json", "r") as readfile:
+        modules = json.load(readfile)
+        readfile.close()
+
     # a lot of this config reading (which we may add more) can eventually be put somewhere less scoped
     apikey = str(config["API"]["apikey"])
     course = str(config["API"]["course"])
@@ -392,6 +396,38 @@ def api_scrape():
     with open("./userdata/assignments.json", "w") as file:
         json.dump(export, file, indent=4)
 
+    query = "https://uncc.instructure.com/api/v1/courses/"+course+"/modules?access_token="+apikey
+    r = requests.get(query)
+    # sometimes Canvas will get mad at the number of requests, depending on the speed of the data transfer. This catches that issue and sleeps
+    # the thread long enough to let us try again.
+    while r.status_code == 403:
+        print(f"Status Code 403, rerequesting data...")
+        time.sleep(2)
+        r = requests.get(query)
+
+    new_modules = json.loads(r.text)
+
+    for module in new_modules:
+       if module["name"] not in list(modules.keys()):
+            modules[module["name"]] = {"id":module["id"], "name":module["name"], "assignments":[]}
+    
+    temp = {"assignments":[]}
+    if "Homeless Assignments" in list(modules.keys()):
+        temp = modules["Homeless Assignments"]
+        del modules["Homeless Assignments"]
+    modules["Homeless Assignments"] = temp
+
+    assignments = list(export.keys())
+    temp = list(assignments)
+    for assignment in temp:
+        for module in list(modules.keys()):
+            if assignment in modules[module]["assignments"]:
+                assignments.remove(assignment)
+                break
+    modules["Homeless Assignments"]["assignments"] += assignments
+                
+        
+
 
 
 # made to get a list of students for the class
@@ -414,7 +450,7 @@ def get_students():
         r = requests.get(query)
 
         while r.status_code == 403:
-            print(f"Status Code 403, rerequesting assignments...")
+            print(f"Status Code 403, rerequesting data...")
             time.sleep(2)
             r = requests.get(query)
 
