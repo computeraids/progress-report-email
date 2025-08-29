@@ -429,6 +429,15 @@ def api_scrape():
 # everything in userdata is ignored by git, so we want to populate it all when the user launches (if its not there)
 def setup_data(args):
 
+    # make directories for files if they don't exist; it's fine to check this everytime this run.
+    files = os.listdir()
+    if "userdata" not in files:
+        os.mkdir("./userdata")
+    if "exports" not in files:
+        os.mkdir("./exports")
+
+    # below is a list of things that read args to determine what to rewrite. keeps functionality modular
+
     if "config" in args:
         make_config()
 
