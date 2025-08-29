@@ -25,7 +25,7 @@ while run:
             run = False
         case 6:
             funcs.api_scrape()
-        case 0:
+        case 9:
             ans = input("You are about to reset userdata. Are you sure you want to do this? (Y/N)")
             if ans == "Y" or ans == "y":
                 funcs.setup_data(["config"])
