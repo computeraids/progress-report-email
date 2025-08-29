@@ -12,7 +12,7 @@ while run:
     5) Exit\n"""))
     match command:
         case 0:
-            funcs.setup_data(["config"])
+            funcs.setup_data(["assignments","modules","api"])
         case 1:
             funcs.api_scrape()
         case 2:

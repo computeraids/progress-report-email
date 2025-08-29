@@ -1,0 +1,4 @@
+userdata/
+exports/
+__pycache__/
+venv/
