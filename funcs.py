@@ -447,7 +447,7 @@ def get_students():
             students_dict[student["sis_user_id"]] = {"name":student["name"], "email":student["email"], "id":student["id"]}
 
     with open("students.json", "r") as writefile:
-        json.dump(students_dict, file, indent=4)
+        json.dump(students_dict, writefile, indent=4)
 
 # sets up user configuration if it isnt present.
 # everything in userdata is ignored by git, so we want to populate it all when the user launches (if its not there)
