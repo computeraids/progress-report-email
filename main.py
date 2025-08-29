@@ -16,11 +16,11 @@ while run:
         case 1:
             funcs.api_scrape()
         case 2:
-            funcs.canvas_api()
+            funcs.canvas_api("Module 01: Principles of Computer Architecture and Organization")
         case 3:
             funcs.check()
         case 4:
-            funcs.make_emails()
+            funcs.make_emails("Module 01: Principles of Computer Architecture and Organization")
         case 5:
             run = False
         case 6:

@@ -94,17 +94,14 @@ def canvas_api(current_week):
     # we can pull everything all at once. It's not that much of a problem.    
     with open("./userdata/modules.json", "r") as file:
         week_map = json.load(file)
-        weeks = week_map.keys()
+        weeks = list(week_map.keys()).reverse()
         file.close()
     
-    weeks_to_send = [current_week]
+    weeks_to_send = []
 
-    # goofy code I wrote, essentially adds a descending int list of the number entered regardless.
-    # there is reason for this; people can enter non integer numbers for week IDs, so here we pull
-    # all that are smaller.
-    for week in weeks:
-        if float(week) < float(current_week):
-            weeks_to_send.append(week)
+    week_index = weeks.find(current_week)
+    for week in weeks[week_index:]:
+        weeks_to_send.append(week)
 
     # uses the module mapping to determine everything that needs to be pulled
     current_assignments = []
@@ -227,23 +224,20 @@ def make_emails(current_week):
         assignment_dict = json.load(file)
         file.close()
 
-    # open all modules known by the tool 
-    with open("./userdata/modules.json", "r") as file:
-        week_map = json.load(file)
-        weeks = week_map.keys()
-        file.close()
-
     with open("./userdata/students.json", "r") as file:
         students = json.load(file)
         file.close()
 
-    # set the week index the user wants to do. We could maybe give a menu that shows modules?
-    weeks_to_send = [current_week]
+    with open("./userdata/modules.json", "r") as file:
+        week_map = json.load(file)
+        weeks = list(week_map.keys())[::-1]
+        file.close()
+    
+    weeks_to_send = []
 
-    # again, week logic to send anything < current.
-    for week in weeks:
-        if float(week) < float(current_week):
-            weeks_to_send.append(week)
+    week_index = weeks.find(current_week)
+    for week in weeks[week_index:]:
+        weeks_to_send.append(week)
 
     # sweet line
     workfile = ""
