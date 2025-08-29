@@ -212,11 +212,11 @@ def scrape_assignments():
 ### imported from runner ###
 # this is the main logic used in the next function to check for missing assignments.
 # it can handle most inputs, we'll mostly use API and something else to backup on unsubmittable assignments.
-def is_missing(assignment, current_row, name_to_index, missing_val):
+def is_missing(assignment, current_row, name_to_index, missing_val, api_dict):
         #checks for list type, then evaluates all criteria. behaves using "or" logic
         if type(missing_val) == type([]):
             for value in missing_val:
-                if is_missing(assignment, current_row, name_to_index, value):
+                if is_missing(assignment, current_row, name_to_index, value, api_dict):
                     return True
         elif missing_val == "api" and int(current_row[1]) in api_dict[assignment]:
             return True
@@ -327,7 +327,7 @@ def make_emails():
                     # for the module, set the total completed to the max that can be. If something isn't complete, mark it as missing, and decrease the count.
                     module_completed = assignment_count
                     for assignment in week_map[current_week]["assignments"]:
-                        if is_missing(assignment, current_row, name_to_index, assignment_dict[assignment]["missingif"]):
+                        if is_missing(assignment, current_row, name_to_index, assignment_dict[assignment]["missingif"], api_dict):
                             module_completed -= 1
 
                     # same thing as before, BUT we're now going over the entire course. We also keep a record of the names of late assignments.
@@ -336,7 +336,7 @@ def make_emails():
                     late_assignment_list = ""
                     for week in weeks_to_send:
                         for assignment in week_map[week]["assignments"]:
-                            if is_missing(assignment, current_row, name_to_index, assignment_dict[assignment]["missingif"]):
+                            if is_missing(assignment, current_row, name_to_index, assignment_dict[assignment]["missingif"], api_dict):
                                 actualcompleted -= 1
                                 final_string = ""
                                 for piece in assignment.split(" (")[:-1]:
