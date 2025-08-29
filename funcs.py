@@ -376,7 +376,7 @@ def api_scrape():
         readfile.close()
 
     with open("./userdata/assignments.json", "r") as readfile:
-        assignments = json.load(readfile).keys()
+        known_assignments = json.load(readfile).keys()
         readfile.close()
 
     # a lot of this config reading (which we may add more) can eventually be put somewhere less scoped
@@ -416,7 +416,7 @@ def api_scrape():
     sorts = sorted(list(suggestions_dict.items()), key=lambda x: x[1]["duedate"].timestamp())
     export = {}
     for item in sorts:
-        if item[1] not in assignments:
+        if item[1] not in known_assignments:
             export[item[0]] = item[1]
             export[item[0]]["duedate"] = export[item[0]]["duedate"].strftime("%Y-%m-%d %H:%M:%S")
 
