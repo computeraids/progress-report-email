@@ -108,9 +108,6 @@ def canvas_api():
         if float(week) < float(current_week):
             weeks_to_send.append(week)
 
-    # awesome line
-    workfile = ""
-
     # uses the module mapping to determine everything that needs to be pulled
     current_assignments = []
     for week in weeks_to_send:
@@ -119,50 +116,49 @@ def canvas_api():
     # start of the actual code. missing_dict is the actual api dump that we save
     missing_dict = {}
     for assignment in current_assignments:
+            
+        # canvas gradebook (and subsequently our code) embeds assignments as "name (assignment_id)". This strips the assignment ID.
+        # if we change this in the future, would make sense to fix this.
+        assignment_id = assignment_dict[assignment]["id"]
+        # for each assignment that needs api info we create a list.
+        missing_dict[assignment] = []
 
-        # if the assignment is in the scope of the pull, check if we need to run the api on it
-        if assignment_dict[assignment]["missingif"] == "api":
-            # canvas gradebook (and subsequently our code) embeds assignments as "name (assignment_id)". This strips the assignment ID.
-            # if we change this in the future, would make sense to fix this.
-            assignment_id = assignment.split("(")[-1][:-1]
-            # for each assignment that needs api info we create a list.
-            missing_dict[assignment] = []
-
-            # so fun fact; we have to batch requests per 100 students to the API. This  looping function is here to go over all the pages.
-            # maybe eventually we implement a progress bar or something? We can know the total amount of work ahead of time.
-            page = 1
-            print(f"Requesting page {page} of {assignment}...")
-            # below is the full api url for the dump. You can look it over, it's pretty straightforward.
+        # so fun fact; we have to batch requests per 100 students to the API. This  looping function is here to go over all the pages.
+        # maybe eventually we implement a progress bar or something? We can know the total amount of work ahead of time.
+        page = 1
+        print(f"Requesting page {page} of {assignment}...")
+        # below is the full api url for the dump. You can look it over, it's pretty straightforward.
+        r = requests.get("https://uncc.instructure.com/api/v1/courses/"+course+"/assignments/"+assignment_id+"/submissions?access_token="+apikey+"&per_page=100&page=1&include[]=submission_history")
+        # sometimes Canvas will get mad at the number of requests, depending on the speed of the data transfer. This catches that issue and sleeps
+        # the thread long enough to let us try again.
+        while r.status_code == 403:
+            print(f"Status Code 403, rerequesting page {page} of {assignment}...")
+            time.sleep(2)
             r = requests.get("https://uncc.instructure.com/api/v1/courses/"+course+"/assignments/"+assignment_id+"/submissions?access_token="+apikey+"&per_page=100&page=1&include[]=submission_history")
-            # sometimes Canvas will get mad at the number of requests, depending on the speed of the data transfer. This catches that issue and sleeps
-            # the thread long enough to let us try again.
+        print("Done!")
+        # checks to see that the export isn't empty (i.e., the page has students on it)
+        while r.text != "[]":
+            page += 1
+            submissions = json.loads(r.text)
+            for submission in submissions:
+                # canvas just directly holds a boolean called missing for submittable assignments. freakin sweet
+                if submission["missing"] and assignment_dict[assignment]["missingif"] == "api":
+                    # the way that we store missing assignments is a list of user IDs we cross-reference later. seemed okay to me
+                    missing_dict[assignment].append(submission["user_id"])
+                # handles 0 case for now
+                elif submission["grade"] == assignment_dict[assignment]["missingif"]:
+                    missing_dict[assignment].append(submission["user_id"])
+
+            # all the code from above again. a dowhile in python would go crazy... which we can write.
+            print(f"Requesting page {page} of {assignment}...")
+            r = requests.get("https://uncc.instructure.com/api/v1/courses/"+course+"/assignments/"+assignment_id+"/submissions?access_token="+apikey+"&per_page=100&page="+str(page)+"&include[]=submission_history")
             while r.status_code == 403:
                 print(f"Status Code 403, rerequesting page {page} of {assignment}...")
                 time.sleep(2)
-                r = requests.get("https://uncc.instructure.com/api/v1/courses/"+course+"/assignments/"+assignment_id+"/submissions?access_token="+apikey+"&per_page=100&page=1&include[]=submission_history")
-            print("Done!")
-            # checks to see that the export isn't empty (i.e., the page has students on it)
-            while r.text != "[]":
-                page += 1
-                submissions = json.loads(r.text)
-                for submission in submissions:
-                    # canvas just directly holds a boolean called missing for submittable assignments. freakin sweet
-                    if submission["missing"] and assignment_dict[assignment]["missingif"] == "api":
-                        # the way that we store missing assignments is a list of user IDs we cross-reference later. seemed okay to me
-                        missing_dict[assignment].append(submission["user_id"])
-                    elif submission["grade"] == 0 and assignment_dict[assignment]["missingif"] == "0":
-                        missing_dict[assignment].append(submission["user_id"])
-
-                # all the code from above again. a dowhile in python would go crazy... which we can write.
-                print(f"Requesting page {page} of {assignment}...")
                 r = requests.get("https://uncc.instructure.com/api/v1/courses/"+course+"/assignments/"+assignment_id+"/submissions?access_token="+apikey+"&per_page=100&page="+str(page)+"&include[]=submission_history")
-                while r.status_code == 403:
-                    print(f"Status Code 403, rerequesting page {page} of {assignment}...")
-                    time.sleep(2)
-                    r = requests.get("https://uncc.instructure.com/api/v1/courses/"+course+"/assignments/"+assignment_id+"/submissions?access_token="+apikey+"&per_page=100&page="+str(page)+"&include[]=submission_history")
-                print("Done!")
-            # empty page, so we're done with this assignment
-            print(f"Page {page} empty, moving on...")
+            print("Done!")
+        # empty page, so we're done with this assignment
+        print(f"Page {page} empty, moving on...")
 
     
     # dumps everything for later use
