@@ -147,8 +147,10 @@ def canvas_api():
                 submissions = json.loads(r.text)
                 for submission in submissions:
                     # canvas just directly holds a boolean called missing for submittable assignments. freakin sweet
-                    if submission["missing"]:
+                    if submission["missing"] and assignment_dict[assignment]["missingif"] == "api":
                         # the way that we store missing assignments is a list of user IDs we cross-reference later. seemed okay to me
+                        missing_dict[assignment].append(submission["user_id"])
+                    elif submission["grade"] == 0 and assignment_dict[assignment]["missingif"] == "0":
                         missing_dict[assignment].append(submission["user_id"])
 
                 # all the code from above again. a dowhile in python would go crazy... which we can write.
@@ -399,7 +401,7 @@ def api_scrape():
 
     for assignment in assignments:
 
-        suggestions_dict[assignment["name"]] = {}
+        suggestions_dict[assignment["name"]] = {"id":assignment["id"]}
         
         if "external_tool" in assignment["submission_types"] or assignment["submission_types"] == []:
             suggestions_dict[assignment["name"]]["missingif"] = "0"
