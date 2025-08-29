@@ -391,7 +391,8 @@ def api_scrape():
     export = {}
     for item in sorts:
         export[item[0]] = item[1]
-        export[item[0]]["duedate"] = export[item[0]]["duedate"].strftime("%Y-%m-%d %H:%M:%S")
+        if type(export[item[0]]["duedate"]) != type(""):
+            export[item[0]]["duedate"] = export[item[0]]["duedate"].strftime("%Y-%m-%d %H:%M:%S")
 
     with open("./userdata/assignments.json", "w") as file:
         json.dump(export, file, indent=4)
@@ -411,11 +412,8 @@ def api_scrape():
        if module["name"] not in list(modules.keys()):
             modules[module["name"]] = {"id":module["id"], "name":module["name"], "assignments":[]}
     
-    temp = {"assignments":[]}
     if "Homeless Assignments" in list(modules.keys()):
-        temp = modules["Homeless Assignments"]
         del modules["Homeless Assignments"]
-    modules["Homeless Assignments"] = temp
 
     assignments = list(export.keys())
     temp = list(assignments)
@@ -424,7 +422,11 @@ def api_scrape():
             if assignment in modules[module]["assignments"]:
                 assignments.remove(assignment)
                 break
-    modules["Homeless Assignments"]["assignments"] += assignments
+    modules["Homeless Assignments"] = {}
+    modules["Homeless Assignments"]["assignments"] = assignments
+
+    with open("./userdata/modules.json", "w") as file:
+        json.dump(modules, file, indent=4)
                 
         
 
