@@ -378,7 +378,7 @@ def api_scrape():
         readfile.close()
 
     with open("./userdata/assignments.json", "r") as readfile:
-        known_assignments = json.load(readfile).keys()
+        known_assignments = list(json.load(readfile).keys())
         readfile.close()
 
     # a lot of this config reading (which we may add more) can eventually be put somewhere less scoped
