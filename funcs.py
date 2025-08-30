@@ -32,6 +32,7 @@ def check():
 
     # open the modules json (handmade)  
     with open("./userdata/modules.json", "r") as file:
+        print(file.read())
         week_map = json.load(file)
         # this is a temp list used to hold all the assignments which have modules ("weeks").
         assignments_in_modules = []
@@ -81,8 +82,8 @@ def canvas_api(current_week):
         readfile.close()
 
     # a lot of this config reading (which we may add more) can eventually be put somewhere less scoped
-    apikey = str(config["API"]["apikey"])
-    course = str(config["API"]["course"])
+    apikey = config["API"]["apikey"]
+    course = config["API"]["course"]
 
     # right now we determine what assignments to pull based on the "./userdata/assignments.json" file. If a given assignment has
     # the api listed as its submission criterion, it pulls it here. Otherwise, we ignore it.
@@ -94,12 +95,13 @@ def canvas_api(current_week):
     # we can pull everything all at once. It's not that much of a problem.    
     with open("./userdata/modules.json", "r") as file:
         week_map = json.load(file)
-        weeks = list(week_map.keys()).reverse()
+        weeks = list(week_map.keys())[::-1]
+        print(weeks)
         file.close()
     
     weeks_to_send = []
 
-    week_index = weeks.find(current_week)
+    week_index = weeks.index(current_week)
     for week in weeks[week_index:]:
         weeks_to_send.append(week)
 
@@ -114,7 +116,7 @@ def canvas_api(current_week):
             
         # canvas gradebook (and subsequently our code) embeds assignments as "name (assignment_id)". This strips the assignment ID.
         # if we change this in the future, would make sense to fix this.
-        assignment_id = assignment_dict[assignment]["id"]
+        assignment_id = str(assignment_dict[assignment]["id"])
         # for each assignment that needs api info we create a list.
         missing_dict[assignment] = []
 
@@ -137,6 +139,7 @@ def canvas_api(current_week):
             submissions = json.loads(r.text)
             for submission in submissions:
                 # canvas just directly holds a boolean called missing for submittable assignments. freakin sweet
+                print(submission["missing"])
                 if submission["missing"] and assignment_dict[assignment]["missingif"] == "api":
                     # the way that we store missing assignments is a list of user IDs we cross-reference later. seemed okay to me
                     missing_dict[assignment].append(submission["user_id"])
@@ -235,9 +238,10 @@ def make_emails(current_week):
     
     weeks_to_send = []
 
-    week_index = weeks.find(current_week)
+    week_index = weeks.index(current_week)
     for week in weeks[week_index:]:
         weeks_to_send.append(week)
+
 
     # sweet line
     workfile = ""
@@ -260,10 +264,7 @@ def make_emails(current_week):
     assignmentlist = ""
     for assignment in week_map[current_week]["assignments"]:
         # this logic cuts the numbers from the assignment when sending it to students.
-        final_string = ""
-        for piece in assignment.split(" (")[:-1]:
-            final_string += piece
-        assignmentlist += "- "+final_string+"\n"
+        assignmentlist += "- "+assignment+"\n"
 
     # counts the total number of assignments which have been due so far, sums the number of assignments in each module.
     totalcomplete = 0
@@ -278,44 +279,37 @@ def make_emails(current_week):
 
     # okay, time for the meat of the function.
     data = []
-    try:
-        while True:
+    for student in students:
+        print(student)
+        # grab the first item, and get their first name (Canvas stores Last, First)
+        name = students[student]["name"].split(", ")[-1]
+        # grab student email
+        email = students[student]["email"]
 
-            # grab the first item, and get their first name (Canvas stores Last, First)
-            student = student["name"].split(", ")[-1]
-            # grab student email
-            email = student["email"]
+        # for the module, set the total completed to the max that can be. If something isn't complete, mark it as missing, and decrease the count.
+        module_completed = assignment_count
+        for assignment in week_map[current_week]["assignments"]:
+            if is_missing(students[student]["id"], api_dict[assignment]):
+                module_completed -= 1
 
-            # for the module, set the total completed to the max that can be. If something isn't complete, mark it as missing, and decrease the count.
-            module_completed = assignment_count
-            for assignment in week_map[current_week]["assignments"]:
-                if is_missing(student["id"], api_dict["assignment"]):
-                    module_completed -= 1
+        # same thing as before, BUT we're now going over the entire course. We also keep a record of the names of late assignments.
+        # we do this so we can send the students a list of the assignments they can work on.
+        actualcompleted = totalcomplete
+        late_assignment_list = ""
+        for week in weeks_to_send:
+            for assignment in week_map[week]["assignments"]:
+                if is_missing(students[student]["id"], api_dict[assignment]):
+                    actualcompleted -= 1
+                    late_assignment_list += "- "+assignment+"\n"
 
-            # same thing as before, BUT we're now going over the entire course. We also keep a record of the names of late assignments.
-            # we do this so we can send the students a list of the assignments they can work on.
-            actualcompleted = totalcomplete
-            late_assignment_list = ""
-            for week in weeks_to_send:
-                for assignment in week_map[week]["assignments"]:
-                    if is_missing(student["id"], api_dict["assignment"]):
-                        actualcompleted -= 1
-                        final_string = ""
-                        for piece in assignment.split(" (")[:-1]:
-                            final_string += piece
-                        late_assignment_list += "- "+final_string+"\n"
+        # if anything is missing, we throw on this line for the email.
+        if actualcompleted != totalcomplete:
+            late_assignment_list = "In order to catch up, you can complete the following assignments:\n" + late_assignment_list
 
-            # if anything is missing, we throw on this line for the email.
-            if actualcompleted != totalcomplete:
-                late_assignment_list = "In order to catch up, you can complete the following assignments:\n" + late_assignment_list
-
-            # this appends everything as it'll go into the export. Pretty clear. 
-            data.append({"Email Address":email, "Student":student, "Module":module, "Assignment Count":assignment_count,
-            "Assignment List":assignmentlist, "Module Completed":module_completed, "Actual Completed Assigments":actualcompleted,
-            "Total Assignments in Course":totalcourse, "Total Complete":totalcomplete, "Late Assignments":late_assignment_list})
-    # since we don't know when the file ends, we use this to catch the completion of the loop.
-    except StopIteration:
-        print("done!")
+        # this appends everything as it'll go into the export. Pretty clear. 
+        data.append({"Email Address":email, "Student":name, "Module":module, "Assignment Count":assignment_count,
+        "Assignment List":assignmentlist, "Module Completed":module_completed, "Actual Completed Assigments":actualcompleted,
+        "Total Assignments in Course":totalcourse, "Total Complete":totalcomplete, "Late Assignments":late_assignment_list})
     # logic to catch naming conventions based on OS
     if ":" in week_map[week]['name']:
         file = open(f"exports/Report - {week_map[week]['name'].split(':')[0]}.csv", "w", newline="")
