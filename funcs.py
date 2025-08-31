@@ -32,7 +32,6 @@ def check():
 
     # open the modules json (handmade)  
     with open("./userdata/modules.json", "r") as file:
-        print(file.read())
         week_map = json.load(file)
         # this is a temp list used to hold all the assignments which have modules ("weeks").
         assignments_in_modules = []
@@ -96,7 +95,6 @@ def canvas_api(current_week):
     with open("./userdata/modules.json", "r") as file:
         week_map = json.load(file)
         weeks = list(week_map.keys())[::-1]
-        print(weeks)
         file.close()
     
     weeks_to_send = []
@@ -139,7 +137,6 @@ def canvas_api(current_week):
             submissions = json.loads(r.text)
             for submission in submissions:
                 # canvas just directly holds a boolean called missing for submittable assignments. freakin sweet
-                print(submission["missing"])
                 if submission["missing"] and assignment_dict[assignment]["missingif"] == "api":
                     # the way that we store missing assignments is a list of user IDs we cross-reference later. seemed okay to me
                     missing_dict[assignment].append(submission["user_id"])
@@ -280,7 +277,6 @@ def make_emails(current_week):
     # okay, time for the meat of the function.
     data = []
     for student in students:
-        print(student)
         # grab the first item, and get their first name (Canvas stores Last, First)
         name = students[student]["name"].split(", ")[-1]
         # grab student email
@@ -502,3 +498,19 @@ def make_config():
     with open('./userdata/config.json', 'w') as writefile:
         json.dump(config, writefile, indent=4)
         writefile.close()
+
+def get_weeks() -> str:
+
+    with open("./userdata/modules.json", "r") as readfile:
+        modules = json.load(readfile)
+        module_names = list(modules.keys())
+        readfile.close()
+    
+    print("Which of the following modules do you want to send? All modules above (before) it will be sent as the course component.\n")
+
+    for index, module in enumerate(module_names):
+        print(f"{index+1}) {module}")
+    print("\n")
+    tosend = int(input("Enter the number next to the module you want to send: "))
+    print(tosend-1)
+    return module_names[tosend-1]

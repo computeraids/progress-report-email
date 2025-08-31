@@ -1,33 +1,50 @@
 import funcs
+import os
+import time
 
 run = True
+
+if os.name == 'nt':
+    os.system('cls')
+else:
+    os.system('clear')
+
+feedback = ''
 
 # this is the most basic thing, but it just runs a interactive terminal thing for the tool. We can interact with any supporting functions from funcs, 
 # but use this file to write software logic.
 while run:
-    command = int(input("""What command do you want to use? (Input a number)
+    print("""What command do you want to use? (Input a number)
     0) Setup Userdata
-    1) Scrape Assignments \t 2) Retrieve API Info
-    3) Check Config \t\t 4) Make Emails
-    5) Exit\n"""))
+    1) Get Course Student List \t\t 2) Get Course Assignments
+    3) Pull Current Assignment Details \t 4) Check Files (Deprecated)
+    5) Make Emails \t\t\t 6) Exit""")
+    print(feedback)
+    command = int(input())
     match command:
         case 0:
             funcs.setup_data(["config","assignments","modules","api", "students"])
+            feedback = 'Successfully set up user data!'
         case 1:
-            funcs.api_scrape()
-        case 2:
-            funcs.canvas_api("Module 01: Principles of Computer Architecture and Organization")
-        case 3:
-            funcs.check()
-        case 4:
-            funcs.make_emails("Module 01: Principles of Computer Architecture and Organization")
-        case 5:
-            run = False
-        case 6:
-            funcs.api_scrape()
-        case 7:
             funcs.get_students()
-        case 9:
-            ans = input("You are about to reset userdata. Are you sure you want to do this? (Y/N)")
-            if ans == "Y" or ans == "y":
-                funcs.setup_data(["config"])
+            feedback = 'Successfully pulled student data!'
+        case 2:
+            funcs.api_scrape()
+            feedback = 'Successfully pulled assignment data!'
+        case 3:
+            funcs.canvas_api(funcs.get_weeks())
+            feedback = 'Successfully pulled submission data!'
+        case 4:
+            funcs.check()
+            feedback = 'Ran Check!'
+        case 5:
+            funcs.make_emails(funcs.get_weeks())
+            feedback = 'Successfully made email in ./exports!'
+        case 6:
+            run = False
+    
+    if os.name == 'nt':
+        os.system('cls')
+    else:
+        os.system('clear')
+    time.sleep(.1)
