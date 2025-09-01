@@ -136,13 +136,16 @@ def canvas_api(current_week):
             page += 1
             submissions = json.loads(r.text)
             for submission in submissions:
+                if type(assignment_dict[assignment]["missingif"]) != type([]):
+                    assignment_dict[assignment]["missingif"] = [assignment_dict[assignment]["missingif"]]
+                for criterion in assignment_dict[assignment]["missingif"]:
                 # canvas just directly holds a boolean called missing for submittable assignments. freakin sweet
-                if submission["missing"] and assignment_dict[assignment]["missingif"] == "api":
-                    # the way that we store missing assignments is a list of user IDs we cross-reference later. seemed okay to me
-                    missing_dict[assignment].append(submission["user_id"])
-                # handles 0 case for now
-                elif submission["grade"] == assignment_dict[assignment]["missingif"]:
-                    missing_dict[assignment].append(submission["user_id"])
+                    if submission["missing"] and criterion == "api":
+                        # the way that we store missing assignments is a list of user IDs we cross-reference later. seemed okay to me
+                        missing_dict[assignment].append(submission["user_id"])
+                    # handles 0 case for now  
+                    elif submission["grade"] == criterion:
+                        missing_dict[assignment].append(submission["user_id"])
 
             # all the code from above again. a dowhile in python would go crazy... which we can write.
             print(f"Requesting page {page} of {assignment}...")
@@ -268,7 +271,7 @@ def make_emails(current_week):
     for week in weeks_to_send:
         totalcomplete += len(week_map[week]["assignments"])
 
-    # counts the total number of assignments due so far too. I believe I changed this code at some point due to a non-functional output. 
+    # counts the total number of assignments due so far too. I believe I changed this code at some point due to a non-Yfunctional output. 
     totalcourse = 0
     for week in weeks:
         totalcourse += len(week_map[week]["assignments"])
@@ -355,6 +358,8 @@ def api_scrape():
     for assignment in new_assignments:
 
         if assignment["name"] not in list(assignments.keys()):
+            
+            assignments[f"{assignment["name"]}"] = {"name":assignment["name"], "id":assignment["id"]}
 
             assignments[assignment["name"]] = {"id":assignment["id"]}
             

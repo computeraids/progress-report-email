@@ -25,7 +25,7 @@ while run:
         case 0:
             funcs.setup_data(["config","assignments","modules","api", "students"])
             feedback = 'Successfully set up user data!'
-        case 1:All 
+        case 1:
             funcs.get_students()
             feedback = 'Successfully pulled student data!'
         case 2:
