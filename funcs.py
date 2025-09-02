@@ -354,7 +354,7 @@ def api_scrape():
     course = str(config["API"]["course"])
 
     # build the api query
-    query = "https://uncc.instructure.com/api/v1/courses/"+course+"/assignments?access_token="+apikey
+    query = "https://uncc.instructure.com/api/v1/courses/"+course+"/assignments?access_token="+apikey+"&per_page=250"
     r = requests.get(query)
     # sometimes Canvas will get mad at the number of requests, depending on the speed of the data transfer. This catches that issue and sleeps
     # the thread long enough to let us try again.
@@ -370,8 +370,6 @@ def api_scrape():
         if assignment["name"] not in list(assignments.keys()):
             
             assignments[f"{assignment["name"]}"] = {"name":assignment["name"], "id":assignment["id"]}
-
-            assignments[assignment["name"]] = {"id":assignment["id"]}
             
             if "external_tool" in assignment["submission_types"] or assignment["submission_types"] == []:
                 assignments[assignment["name"]]["missingif"] = "0"
@@ -386,6 +384,8 @@ def api_scrape():
                 assignments[assignment["name"]]["duedate"] = datetime.datetime.fromtimestamp(1475683200)
             assignments[assignment["name"]]["duetimestamp"] = assignments[assignment["name"]]["duedate"].timestamp()
 
+
+
     sorts = sorted(list(assignments.items()), key=lambda x: x[1]["duetimestamp"])
     export = {}
     for item in sorts:
@@ -396,7 +396,7 @@ def api_scrape():
     with open("./userdata/assignments.json", "w") as file:
         json.dump(export, file, indent=4)
 
-    query = "https://uncc.instructure.com/api/v1/courses/"+course+"/modules?access_token="+apikey
+    query = "https://uncc.instructure.com/api/v1/courses/"+course+"/modules?access_token="+apikey+"&per_page=250"
     r = requests.get(query)
     # sometimes Canvas will get mad at the number of requests, depending on the speed of the data transfer. This catches that issue and sleeps
     # the thread long enough to let us try again.
@@ -538,7 +538,7 @@ def canvas_assignment_dump():
     # a lot of this config reading (which we may add more) can eventually be put somewhere less scoped
     apikey = str(config["API"]["apikey"])
     course = str(config["API"]["course"])
-    query = "https://uncc.instructure.com/api/v1/courses/"+course+"/assignments?access_token="+apikey
+    query = "https://uncc.instructure.com/api/v1/courses/"+course+"/assignments?access_token="+apikey+"&per_page=250"
     r = requests.get(query)
     export = json.loads(r.text)
     with open("./userdata/canvas_assignments_dump.json", "w") as file:
