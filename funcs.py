@@ -110,7 +110,7 @@ def canvas_api(current_week):
 
     # start of the actual code. missing_dict is the actual api dump that we save
     missing_dict = {}
-    for assignment in current_assignments:
+    for assignment in set(current_assignments):
             
         # canvas gradebook (and subsequently our code) embeds assignments as "name (assignment_id)". This strips the assignment ID.
         # if we change this in the future, would make sense to fix this.
@@ -126,21 +126,13 @@ def canvas_api(current_week):
         base = "https://uncc.instructure.com/api/v1/courses/"+course+"/assignments/"
         query = assignment_id+"/submissions?access_token="+apikey+"&per_page=100&page=1&include[]=submission_history"
         r = requests.get(base+query)
-        # sometimes Canvas will get mad at the number of requests, depending on the speed of the data transfer. This catches that issue and sleeps
+        # sometimes Canvas will get mad at the number of requests, depending on the speokay,ed of the data transfer. This catches that issue and sleeps
         # the thread long enough to let us try again.
-        while r.status_code == 403:
+        while r.status_code == 403 or list(json.loads(r.text))[0] == "errors":
             print(f"Status Code 403, rerequesting page {page} of {assignment}...")
-            time.sleep(2)
-            r = requests.get(query)
-
-        if type(json.loads(r.text)) == type(""):
-            base = "https://uncc.instructure.com/api/v1/courses/"+course+"/quizzes/"
-        # checks to see that the export isn't empty (i.e., the page has students on it)
+            time.sleep(5)
             r = requests.get(base+query)
-            while r.status_code == 403:
-                print(f"Status Code 403, rerequesting page {page} of {assignment}...")
-                time.sleep(2)
-                r = requests.get(query)
+
         while r.text != "[]":
             page += 1
             submissions = json.loads(r.text)
@@ -160,9 +152,9 @@ def canvas_api(current_week):
             print(f"Requesting page {page} of {assignment}...")
             query = assignment_id+"/submissions?access_token="+apikey+"&per_page=100&page="+str(page)+"&include[]=submission_history"
             r = requests.get(base+query)
-            while r.status_code == 403:
+            while r.status_code == 403 or list(json.loads(r.text))[0] == "errors":
                 print(f"Status Code 403, rerequesting page {page} of {assignment}...")
-                time.sleep(2)
+                time.sleep(5)
                 r = requests.get(base+query)
             print("Done!")
         # empty page, so we're done with this assignment
