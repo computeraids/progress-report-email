@@ -123,15 +123,24 @@ def canvas_api(current_week):
         page = 1
         print(f"Requesting page {page} of {assignment}...")
         # below is the full api url for the dump. You can look it over, it's pretty straightforward.
-        r = requests.get("https://uncc.instructure.com/api/v1/courses/"+course+"/assignments/"+assignment_id+"/submissions?access_token="+apikey+"&per_page=100&page=1&include[]=submission_history")
+        base = "https://uncc.instructure.com/api/v1/courses/"+course+"/assignments/"
+        query = assignment_id+"/submissions?access_token="+apikey+"&per_page=100&page=1&include[]=submission_history"
+        r = requests.get(base+query)
         # sometimes Canvas will get mad at the number of requests, depending on the speed of the data transfer. This catches that issue and sleeps
         # the thread long enough to let us try again.
         while r.status_code == 403:
             print(f"Status Code 403, rerequesting page {page} of {assignment}...")
             time.sleep(2)
-            r = requests.get("https://uncc.instructure.com/api/v1/courses/"+course+"/assignments/"+assignment_id+"/submissions?access_token="+apikey+"&per_page=100&page=1&include[]=submission_history")
-        print("Done!")
+            r = requests.get(query)
+
+        if type(json.loads(r.text)) == type(""):
+            base = "https://uncc.instructure.com/api/v1/courses/"+course+"/quizzes/"
         # checks to see that the export isn't empty (i.e., the page has students on it)
+            r = requests.get(base+query)
+            while r.status_code == 403:
+                print(f"Status Code 403, rerequesting page {page} of {assignment}...")
+                time.sleep(2)
+                r = requests.get(query)
         while r.text != "[]":
             page += 1
             submissions = json.loads(r.text)
@@ -149,11 +158,12 @@ def canvas_api(current_week):
 
             # all the code from above again. a dowhile in python would go crazy... which we can write.
             print(f"Requesting page {page} of {assignment}...")
-            r = requests.get("https://uncc.instructure.com/api/v1/courses/"+course+"/assignments/"+assignment_id+"/submissions?access_token="+apikey+"&per_page=100&page="+str(page)+"&include[]=submission_history")
+            query = assignment_id+"/submissions?access_token="+apikey+"&per_page=100&page="+str(page)+"&include[]=submission_history"
+            r = requests.get(base+query)
             while r.status_code == 403:
                 print(f"Status Code 403, rerequesting page {page} of {assignment}...")
                 time.sleep(2)
-                r = requests.get("https://uncc.instructure.com/api/v1/courses/"+course+"/assignments/"+assignment_id+"/submissions?access_token="+apikey+"&per_page=100&page="+str(page)+"&include[]=submission_history")
+                r = requests.get(base+query)
             print("Done!")
         # empty page, so we're done with this assignment
         print(f"Page {page} empty, moving on...")
@@ -519,3 +529,17 @@ def get_weeks() -> str:
     tosend = int(input("Enter the number next to the module you want to send: "))
     print(tosend-1)
     return module_names[tosend-1]
+
+def canvas_assignment_dump():
+    with open("./userdata/config.json", "r") as readfile:
+        config = json.load(readfile)
+        readfile.close()
+
+    # a lot of this config reading (which we may add more) can eventually be put somewhere less scoped
+    apikey = str(config["API"]["apikey"])
+    course = str(config["API"]["course"])
+    query = "https://uncc.instructure.com/api/v1/courses/"+course+"/assignments?access_token="+apikey
+    r = requests.get(query)
+    export = json.loads(r.text)
+    with open("./userdata/canvas_assignments_dump.json", "w") as file:
+        json.dump(export, file, indent=4)

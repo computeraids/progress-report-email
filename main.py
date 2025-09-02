@@ -42,3 +42,6 @@ while run:
             feedback = 'Successfully made email in ./exports!'
         case 6:
             run = False
+        case 20:
+            funcs.canvas_assignment_dump()
+            feedback = 'DEBUG: Canvas export made in ./userdata!'
