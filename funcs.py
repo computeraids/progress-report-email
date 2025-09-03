@@ -152,7 +152,7 @@ def canvas_api(current_week):
             print(f"Requesting page {page} of {assignment}...")
             query = assignment_id+"/submissions?access_token="+apikey+"&per_page=100&page="+str(page)+"&include[]=submission_history"
             r = requests.get(base+query)
-            while r.status_code == 403 or list(json.loads(r.text))[0] == "errors":
+            while r.status_code == 403 or (r.text != "[]" and list(json.loads(r.text))[0] == "errors"):
                 print(f"Status Code 403, rerequesting page {page} of {assignment}...")
                 time.sleep(5)
                 r = requests.get(base+query)
