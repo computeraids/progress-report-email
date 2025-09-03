@@ -363,7 +363,7 @@ def api_scrape():
             
             assignments[f"{assignment["name"]}"] = {"name":assignment["name"], "id":assignment["id"]}
             
-            if "external_tool" in assignment["submission_types"] or assignment["submission_types"] == []:
+            if "external_tool" in assignment["submission_types"] or assignment["submission_types"] == [] or "none" in assignment["submission_types"]:
                 assignments[assignment["name"]]["missingif"] = "0"
             else:
                 assignments[assignment["name"]]["missingif"] = "api"
