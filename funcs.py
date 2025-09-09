@@ -460,7 +460,6 @@ def get_students():
                 r2 = requests.get(query2)
             student = json.loads(r2.text)[0]
             if student["role"] == "StudentEnrollment":
-                print("found a student: "+student["user"]["login_id"])
                 students_dict[student["user"]["login_id"]] = {"name":student["user"]["sortable_name"], "email":student["user"]["login_id"]+"@charlotte.edu", "id":student["user"]["id"]}
         page += 1
 
