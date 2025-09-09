@@ -361,7 +361,7 @@ def api_scrape():
 
         if assignment["name"] not in list(assignments.keys()):
             
-            assignments[f"{assignment["name"]}"] = {"name":assignment["name"], "id":assignment["id"]}
+            assignments[assignment["name"]] = {"name":assignment["name"], "id":assignment["id"]}
             
             if "external_tool" in assignment["submission_types"] or assignment["submission_types"] == [] or "none" in assignment["submission_types"]:
                 assignments[assignment["name"]]["missingif"] = "0"
@@ -450,10 +450,18 @@ def get_students():
         if r.text == "[]":
             break
 
-        students = json.loads(r.text)
-
-        for student in students:
-            students_dict[student["login_id"]] = {"name":student["sortable_name"], "email":student["email"], "id":student["id"]}
+        users = json.loads(r.text)
+        for user in users:
+            query2 = "https://uncc.instructure.com/api/v1/courses/"+course+"/enrollments?access_token="+apikey+"&user_id="+str(user["id"])
+            r2 = requests.get(query2)
+            while r2.status_code == 403:
+                print(f"Status Code 403, rerequesting data...")
+                time.sleep(2)
+                r2 = requests.get(query2)
+            student = json.loads(r2.text)[0]
+            if student["role"] == "StudentEnrollment":
+                print("found a student: "+student["user"]["login_id"])
+                students_dict[student["user"]["login_id"]] = {"name":student["user"]["sortable_name"], "email":student["user"]["login_id"]+"@charlotte.edu", "id":student["user"]["id"]}
         page += 1
 
     with open("./userdata/students.json", "w") as writefile:
