@@ -19,8 +19,8 @@ while run:
     0) Setup Userdata
     1) Get Course Student List \t\t 2) Get Course Assignments
     3) Pull Current Assignment Details \t 4) Check Files (Deprecated)
-    5) Make Emails \t\t\t 6) Exit
-    7) Combine/Rename Modules""")
+    5) Make Emails \t\t\t 6) Change Late List Items
+    7) Combine/Rename Modules \t\t 8) Exit""")
     command = int(input())
     match command:
         case 0:
@@ -41,14 +41,17 @@ while run:
         case 5:
             funcs.make_emails(funcs.select_one_from_list(funcs.get_week_names()))
             feedback = 'Successfully made email in ./exports!'
-        case 6:
+        case 8:
             run = False
         case 7:
             funcs.combine_modules(funcs.get_weeks(), input("\nWhat would you like to rename these modules to? "))
             feedback = ""
-        case 8:
+        case 6:
             funcs.change_late_list(funcs.select_one_from_list(funcs.get_week_names()))
             feedback = ""
         case 20:
             funcs.canvas_assignment_dump()
             feedback = 'DEBUG: Canvas export made in ./userdata!'
+        case 91:
+            funcs.make_config()
+            feedback = "Regenerated Config!"
